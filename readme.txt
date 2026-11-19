@@ -58,7 +58,7 @@ The extension uses the formexposed REST API of LW IT Solutions (formexposed.com)
 * GET https://formexposed.com/api/v1/domains, with your API key in the Authorization header - when you save a key (to check it), when you open the page and the list is older than 10 minutes, and when you click "Refresh now". Sent: your API key. Received: the domains of your account with rating, score, date of the last check, number of problems, blocked bots and a report link. The list of your child sites is not sent anywhere.
 * The "Report" links and the link to "Agency → API" open formexposed.com in your browser.
 
-Privacy policy: https://formexposed.com/privacy · Terms of service: https://formexposed.com/terms · Legal notice: https://formexposed.com/legal
+formexposed.com terms of service: https://formexposed.com/en/legal/terms · privacy policy: https://formexposed.com/en/legal/privacy · legal notice: https://formexposed.com/en/legal/imprint
 
 == Changelog ==
 
