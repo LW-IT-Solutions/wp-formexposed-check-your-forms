@@ -4,7 +4,7 @@ Tags: mainwp, contact form, spam, agency, monitoring
 Requires at least: 6.2
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,12 +55,19 @@ The API key (an option that is not autoloaded) and the list from formexposed.com
 
 The extension uses the formexposed REST API of LW IT Solutions (formexposed.com):
 
-* GET https://formexposed.com/api/v1/domains, with your API key in the Authorization header - when you save a key (to check it), when you open the page and the list is older than 10 minutes, and when you click "Refresh now". Sent: your API key. Received: the domains of your account with rating, score, date of the last check, number of problems, blocked bots and a report link. The list of your child sites is not sent anywhere.
+* GET https://formexposed.com/api/v1/domains, with your API key in the Authorization header - when you save a key (to check it), when you open the page and the list is older than 10 minutes, and when you click "Refresh now". Sent: your API key (and, as with every request WordPress makes, the WordPress version and the address of your dashboard site in the user agent). Received: the domains of your account with rating, score, date of the last check, number of problems, blocked bots and a report link. The list of your child sites is not sent anywhere.
 * The "Report" links and the link to "Agency → API" open formexposed.com in your browser.
+
+A developer can point the extension at another formexposed installation (for example a test installation) by defining the constant `FORMEXPOSED_MAINWP_API` in wp-config.php as an HTTPS address; the settings page then names that host. Without the constant, only formexposed.com is contacted.
 
 formexposed.com terms of service: https://formexposed.com/en/legal/terms · privacy policy: https://formexposed.com/en/legal/privacy · legal notice: https://formexposed.com/en/legal/imprint
 
 == Changelog ==
+
+= 1.1.1 =
+* The answer of formexposed.com is sanitized field by field before it is stored and shown; the child site list from MainWP as well.
+* The API address is https://formexposed.com unless the constant FORMEXPOSED_MAINWP_API is set in wp-config.php; the readme says so, and what each request sends.
+* Requests to formexposed.com wait at most 10 seconds; colours come from a stylesheet loaded only on the page of the extension.
 
 = 1.1.0 =
 * The API key is checked before it is saved; plain-words errors for a revoked key, a missing Business plan and the rate limit.
@@ -73,6 +80,9 @@ formexposed.com terms of service: https://formexposed.com/en/legal/terms · priv
 * First release: portfolio of all child sites with rating, score, last check, problems, blocked bots and report link.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Sanitizes the answers of formexposed.com where they are read and describes exactly what is sent.
 
 = 1.1.0 =
 Checks the API key before saving it and explains errors in plain words. Adds a summary of the portfolio.

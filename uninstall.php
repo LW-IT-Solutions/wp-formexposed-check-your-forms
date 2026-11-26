@@ -1,6 +1,6 @@
 <?php
 /**
- * formexposed for MainWP - uninstall: the API key, the cached list and the message go,
+ * formexposed – check your forms - uninstall: the API key, the cached list and the message go,
  * on every site of a multisite network.
  */
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {

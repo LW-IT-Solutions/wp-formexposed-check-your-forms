@@ -3,7 +3,7 @@
  * Plugin Name:       formexposed – check your forms
  * Plugin URI:        https://formexposed.com/
  * Description:       Shows the contact form protection of all your MainWP child sites from formexposed.com: rating, risk score, last check, problems and blocked bots, with the report one click away.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            LW IT Solutions
@@ -15,32 +15,28 @@
  * For agencies with a formexposed Business plan. Reads GET /api/v1/domains with the agency's API key
  * and matches the result with the child sites of MainWP by host name. Without MainWP it works as a
  * plain overview under Settings -> formexposed portfolio. The API key stays in this dashboard (option,
- * not autoloaded) and goes only to formexposed.com; the child site URLs never leave this site.
+ * not autoloaded) and goes only to the formexposed API (https://formexposed.com, or the address a
+ * developer sets with FORMEXPOSED_MAINWP_API in wp-config.php); the child site URLs never leave this site.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// A second copy (website ZIP folder formexposed-mainwp next to the wordpress.org folder) stops here.
+// Another copy of this plugin is already loaded: stop here.
 if ( defined( 'FORMEXPOSED_MAINWP_FILE' ) ) {
 	return;
 }
 
 define( 'FORMEXPOSED_MAINWP_FILE', __FILE__ );
-define( 'FORMEXPOSED_MAINWP_VERSION', '1.1.0' );
-if ( ! defined( 'FORMEXPOSED_MAINWP_API' ) ) {
-	// wp-config.php may override it (development, staging); otherwise the address in services.json.
-	$formexposed_mainwp_services = wp_json_file_decode( __DIR__ . '/services.json', array( 'associative' => true ) );
-	define( 'FORMEXPOSED_MAINWP_API', defined( 'FORMEXPOSED_API' ) ? FORMEXPOSED_API : ( is_array( $formexposed_mainwp_services ) && isset( $formexposed_mainwp_services['api'] ) ? (string) $formexposed_mainwp_services['api'] : '' ) );
-	unset( $formexposed_mainwp_services );
-}
+define( 'FORMEXPOSED_MAINWP_VERSION', '1.1.1' );
 
 class Formexposed_MainWP {
 
 	const OPT_KEY   = 'formexposed_mainwp_key';
 	const TRANSIENT = 'formexposed_mainwp_domains';
 	const MSG       = 'formexposed_mainwp_msg';
+	const API       = 'https://formexposed.com';
 
 	private $child_key = false;
 
@@ -55,6 +51,29 @@ class Formexposed_MainWP {
 		add_action( 'admin_post_formexposed_mainwp_key', array( $this, 'save_key' ) );
 		add_action( 'admin_post_formexposed_mainwp_refresh', array( $this, 'refresh' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( FORMEXPOSED_MAINWP_FILE ), array( $this, 'action_links' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'styles' ) );
+	}
+
+	/**
+	 * Address of the formexposed API: https://formexposed.com. A developer can point the extension at
+	 * another formexposed installation by defining FORMEXPOSED_MAINWP_API in wp-config.php as an HTTPS
+	 * address (scheme and host, no path); any other value is ignored.
+	 */
+	public static function api() {
+		if ( defined( 'FORMEXPOSED_MAINWP_API' ) && is_string( FORMEXPOSED_MAINWP_API ) ) {
+			$p = wp_parse_url( trim( FORMEXPOSED_MAINWP_API ) );
+			if ( is_array( $p ) && isset( $p['scheme'], $p['host'] ) && 'https' === strtolower( $p['scheme'] )
+				&& ! isset( $p['user'] ) && ! isset( $p['pass'] ) && ! isset( $p['query'] ) && ! isset( $p['fragment'] )
+				&& ( ! isset( $p['path'] ) || '' === trim( $p['path'], '/' ) ) ) {
+				return 'https://' . strtolower( $p['host'] ) . ( isset( $p['port'] ) ? ':' . (int) $p['port'] : '' );
+			}
+		}
+		return self::API;
+	}
+
+	/** Host name of the API, for the texts on the page. */
+	private static function api_host() {
+		return (string) wp_parse_url( self::api(), PHP_URL_HOST );
 	}
 
 	/** MainWP lists us as an extension. */
@@ -89,9 +108,38 @@ class Formexposed_MainWP {
 		if ( ! self::mainwp_active() ) {
 			return admin_url( 'options-general.php?page=formexposed-mainwp' );
 		}
+		return admin_url( 'admin.php?page=' . self::page_slug() );
+	}
+
+	/** The page slug: formexposed-mainwp under Settings, else the MainWP extension page. */
+	private static function page_slug() {
+		if ( ! self::mainwp_active() ) {
+			return 'formexposed-mainwp';
+		}
 		// MainWP derives the extension page from the plugin folder name, e.g. formexposed-check-your-forms -> Extensions-Formexposed-Check-Your-Forms.
 		$folder = dirname( plugin_basename( FORMEXPOSED_MAINWP_FILE ) );
-		return admin_url( 'admin.php?page=Extensions-' . str_replace( ' ', '-', ucwords( str_replace( '-', ' ', $folder ) ) ) );
+		return 'Extensions-' . str_replace( ' ', '-', ucwords( str_replace( '-', ' ', $folder ) ) );
+	}
+
+	/**
+	 * Colours of the summary and the ratings, only on the page of this extension.
+	 *
+	 * @param string $hook_suffix Current admin page.
+	 */
+	public function styles( $hook_suffix ) {
+		$end = '_page_' . strtolower( self::page_slug() );
+		if ( strtolower( substr( (string) $hook_suffix, -strlen( $end ) ) ) !== $end ) {
+			return;
+		}
+		$css = '.formexposed-mainwp-summary{float:none;margin:8px 0 12px}'
+			. '.formexposed-mainwp-scroll{overflow-x:auto}';
+		foreach ( self::levels() as $level => $lv ) {
+			$css .= '.formexposed-mainwp-level-' . sanitize_html_class( $level ) . '{color:' . $lv[0] . '}';
+		}
+		$css .= '.formexposed-mainwp-level-none{color:#50575e}';
+		wp_register_style( 'formexposed-mainwp', false, array(), FORMEXPOSED_MAINWP_VERSION );
+		wp_enqueue_style( 'formexposed-mainwp' );
+		wp_add_inline_style( 'formexposed-mainwp', $css );
 	}
 
 	public function action_links( $links ) {
@@ -144,8 +192,8 @@ class Formexposed_MainWP {
 
 	/** One request to GET /api/v1/domains. Returns the list or WP_Error with a sentence a person understands. */
 	private function fetch( $key ) {
-		$r = wp_remote_get( FORMEXPOSED_MAINWP_API . '/api/v1/domains', array(
-			'timeout' => 20,
+		$r = wp_remote_get( self::api() . '/api/v1/domains', array(
+			'timeout' => 10,
 			'headers' => array(
 				'Authorization' => 'Bearer ' . $key,
 				'Accept'        => 'application/json',
@@ -158,9 +206,16 @@ class Formexposed_MainWP {
 		$code = (int) wp_remote_retrieve_response_code( $r );
 		$j    = json_decode( (string) wp_remote_retrieve_body( $r ), true );
 		if ( 200 === $code && is_array( $j ) && isset( $j['data'] ) && is_array( $j['data'] ) ) {
-			return array_values( array_filter( $j['data'], 'is_array' ) );
+			$list = array();
+			foreach ( $j['data'] as $d ) {
+				if ( is_array( $d ) ) {
+					$list[] = self::clean_domain( $d );
+				}
+			}
+			return $list;
 		}
-		$err = is_array( $j ) && isset( $j['error']['code'] ) ? (string) $j['error']['code'] : 'http_' . $code;
+		$err = is_array( $j ) && isset( $j['error']['code'] ) && is_string( $j['error']['code'] ) ? sanitize_key( $j['error']['code'] ) : '';
+		$err = '' !== $err ? $err : 'http_' . $code;
 		switch ( $err ) {
 			case 'unauthorized':
 				return new WP_Error( 'api', __( 'formexposed.com does not accept this API key. It may have been revoked - create a new one under Agency → API.', 'formexposed-check-your-forms' ) );
@@ -172,6 +227,28 @@ class Formexposed_MainWP {
 				/* translators: %s: error code */
 				return new WP_Error( 'api', sprintf( __( 'formexposed.com answered with an error: %s', 'formexposed-check-your-forms' ), $err ) );
 		}
+	}
+
+	/**
+	 * One domain of the API answer, with only the fields this page uses, each sanitized:
+	 * hostname, label, level (one of levels() or ''), score, problems, bots_blocked_30d (number or null),
+	 * last_check and report_url.
+	 */
+	private static function clean_domain( array $d ) {
+		$number = static function ( $v ) {
+			return is_numeric( $v ) ? absint( $v ) : null;
+		};
+		$level  = isset( $d['level'] ) && is_string( $d['level'] ) ? sanitize_key( $d['level'] ) : '';
+		return array(
+			'hostname'         => isset( $d['hostname'] ) && is_string( $d['hostname'] ) ? sanitize_text_field( $d['hostname'] ) : '',
+			'label'            => isset( $d['label'] ) && is_string( $d['label'] ) ? sanitize_text_field( $d['label'] ) : '',
+			'level'            => isset( self::levels()[ $level ] ) ? $level : '',
+			'score'            => isset( $d['score'] ) ? $number( $d['score'] ) : null,
+			'problems'         => isset( $d['problems'] ) ? $number( $d['problems'] ) : null,
+			'bots_blocked_30d' => isset( $d['bots_blocked_30d'] ) ? $number( $d['bots_blocked_30d'] ) : null,
+			'last_check'       => isset( $d['last_check'] ) && is_string( $d['last_check'] ) ? sanitize_text_field( $d['last_check'] ) : '',
+			'report_url'       => isset( $d['report_url'] ) && is_string( $d['report_url'] ) ? esc_url_raw( $d['report_url'], array( 'https' ) ) : '',
+		);
 	}
 
 	/** The domains of the account, 10 minutes in a transient. Returns array or WP_Error. */
@@ -196,8 +273,17 @@ class Formexposed_MainWP {
 		if ( ! $this->child_key ) {
 			return array();
 		}
-		$s = apply_filters( 'mainwp_getsites', FORMEXPOSED_MAINWP_FILE, $this->child_key, null );
-		return is_array( $s ) ? $s : array();
+		$s     = apply_filters( 'mainwp_getsites', FORMEXPOSED_MAINWP_FILE, $this->child_key, null );
+		$sites = array();
+		foreach ( is_array( $s ) ? $s : array() as $site ) {
+			if ( is_array( $site ) ) {
+				$sites[] = array(
+					'name' => isset( $site['name'] ) && is_scalar( $site['name'] ) ? sanitize_text_field( (string) $site['name'] ) : '',
+					'url'  => isset( $site['url'] ) && is_string( $site['url'] ) ? esc_url_raw( $site['url'] ) : '',
+				);
+			}
+		}
+		return $sites;
 	}
 
 	public static function host_of( $url ) {
@@ -209,7 +295,7 @@ class Formexposed_MainWP {
 	public function rows( $domains, $sites ) {
 		$by_host = array();
 		foreach ( (array) $domains as $d ) {
-			if ( isset( $d['hostname'] ) ) {
+			if ( isset( $d['hostname'] ) && '' !== (string) $d['hostname'] ) {
 				$by_host[ preg_replace( '/^www\./', '', strtolower( (string) $d['hostname'] ) ) ] = $d;
 			}
 		}
@@ -274,13 +360,13 @@ class Formexposed_MainWP {
 			<?php endif; ?>
 
 			<?php if ( ! is_wp_error( $domains ) ) : ?>
-			<ul class="subsubsub" style="float:none;margin:8px 0 12px">
-				<li><strong style="color:#b32d2e"><?php echo esc_html( number_format_i18n( $count['exposed'] ) ); ?></strong> <?php esc_html_e( 'exposed', 'formexposed-check-your-forms' ); ?> |</li>
-				<li><strong style="color:#996800"><?php echo esc_html( number_format_i18n( $count['partially_protected'] ) ); ?></strong> <?php esc_html_e( 'partially protected', 'formexposed-check-your-forms' ); ?> |</li>
-				<li><strong style="color:#00750f"><?php echo esc_html( number_format_i18n( $count['protected'] ) ); ?></strong> <?php esc_html_e( 'protected', 'formexposed-check-your-forms' ); ?> |</li>
+			<ul class="subsubsub formexposed-mainwp-summary">
+				<li><strong class="formexposed-mainwp-level-exposed"><?php echo esc_html( number_format_i18n( $count['exposed'] ) ); ?></strong> <?php esc_html_e( 'exposed', 'formexposed-check-your-forms' ); ?> |</li>
+				<li><strong class="formexposed-mainwp-level-partially_protected"><?php echo esc_html( number_format_i18n( $count['partially_protected'] ) ); ?></strong> <?php esc_html_e( 'partially protected', 'formexposed-check-your-forms' ); ?> |</li>
+				<li><strong class="formexposed-mainwp-level-protected"><?php echo esc_html( number_format_i18n( $count['protected'] ) ); ?></strong> <?php esc_html_e( 'protected', 'formexposed-check-your-forms' ); ?> |</li>
 				<li><strong><?php echo esc_html( number_format_i18n( $count['missing'] ) ); ?></strong> <?php esc_html_e( 'child sites not in formexposed', 'formexposed-check-your-forms' ); ?></li>
 			</ul>
-			<div style="overflow-x:auto">
+			<div class="formexposed-mainwp-scroll">
 			<table class="widefat striped">
 				<thead><tr>
 					<th scope="col"><?php esc_html_e( 'Site', 'formexposed-check-your-forms' ); ?></th>
@@ -298,13 +384,14 @@ class Formexposed_MainWP {
 						<?php if ( ! $d ) : ?>
 							<td colspan="5"><?php esc_html_e( 'Not in formexposed yet. Add it under Agency → Import on formexposed.com, or run on the site: wp formexposed connect fxc_...', 'formexposed-check-your-forms' ); ?></td>
 						<?php else : ?>
-							<?php $lv = isset( $d['level'], $levels[ (string) $d['level'] ] ) ? $levels[ (string) $d['level'] ] : array( '#50575e', __( 'Not checked yet', 'formexposed-check-your-forms' ) ); ?>
-							<td><strong style="color:<?php echo esc_attr( $lv[0] ); ?>"><?php echo esc_html( $lv[1] ); ?></strong><?php echo isset( $d['score'] ) && null !== $d['score'] ? ' · ' . esc_html( (int) $d['score'] . '/100' ) : ''; ?></td>
+							<?php $known = isset( $d['level'], $levels[ (string) $d['level'] ] ); ?>
+							<?php $lv = $known ? $levels[ (string) $d['level'] ] : array( '#50575e', __( 'Not checked yet', 'formexposed-check-your-forms' ) ); ?>
+							<td><strong class="<?php echo esc_attr( 'formexposed-mainwp-level-' . ( $known ? sanitize_html_class( (string) $d['level'] ) : 'none' ) ); ?>"><?php echo esc_html( $lv[1] ); ?></strong><?php echo isset( $d['score'] ) && null !== $d['score'] ? ' · ' . esc_html( (int) $d['score'] . '/100' ) : ''; ?></td>
 							<td><?php echo ! empty( $d['last_check'] ) ? esc_html( wp_date( get_option( 'date_format' ), (int) strtotime( (string) $d['last_check'] ) ) ) : '–'; ?></td>
 							<td><?php echo isset( $d['problems'] ) && null !== $d['problems'] ? esc_html( (int) $d['problems'] ) : '–'; ?></td>
 							<td><?php echo isset( $d['bots_blocked_30d'] ) && null !== $d['bots_blocked_30d'] ? esc_html( number_format_i18n( (int) $d['bots_blocked_30d'] ) ) : '–'; ?></td>
 							<td>
-							<?php if ( ! empty( $d['report_url'] ) && 0 === strpos( (string) $d['report_url'], FORMEXPOSED_MAINWP_API . '/' ) ) : ?>
+							<?php if ( ! empty( $d['report_url'] ) && 0 === strpos( (string) $d['report_url'], self::api() . '/' ) ) : ?>
 								<a href="<?php echo esc_url( (string) $d['report_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Report', 'formexposed-check-your-forms' ); ?><span class="screen-reader-text"> <?php echo esc_html( $r['host'] ); ?> <?php esc_html_e( '(opens in a new tab)', 'formexposed-check-your-forms' ); ?></span></a>
 							<?php endif; ?>
 							</td>
@@ -335,9 +422,10 @@ class Formexposed_MainWP {
 								<?php
 								echo wp_kses(
 									sprintf(
-										/* translators: %s: link "Agency → API" */
-										esc_html__( 'Create a key on formexposed.com under %s (Business plan). The key is checked before it is saved; it is sent only to formexposed.com.', 'formexposed-check-your-forms' ),
-										'<a href="' . esc_url( FORMEXPOSED_MAINWP_API . '/agency?tab=api' ) . '" target="_blank" rel="noopener">' . esc_html__( 'Agency → API', 'formexposed-check-your-forms' ) . '</a>'
+										/* translators: 1: link "Agency → API", 2: host name of the formexposed API, normally formexposed.com */
+										esc_html__( 'Create a key on formexposed.com under %1$s (Business plan). The key is checked before it is saved; it is sent only to %2$s.', 'formexposed-check-your-forms' ),
+										'<a href="' . esc_url( self::api() . '/agency?tab=api' ) . '" target="_blank" rel="noopener">' . esc_html__( 'Agency → API', 'formexposed-check-your-forms' ) . '</a>',
+										esc_html( self::api_host() )
 									),
 									array(
 										'a' => array(
