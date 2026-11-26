@@ -4,7 +4,7 @@ Tags: mainwp, contact form, spam, agency, monitoring
 Requires at least: 6.2
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,15 @@ A developer can point the extension at another formexposed installation (for exa
 formexposed.com terms of service: https://formexposed.com/en/legal/terms · privacy policy: https://formexposed.com/en/legal/privacy · legal notice: https://formexposed.com/en/legal/imprint
 
 == Changelog ==
+
+= 1.2.0 =
+* Summary tiles per rating with a bar of the shares; a click on a tile filters the table.
+* Ratings as badges with an icon and a meter for the risk score; problems and blocked bots at a glance.
+* Last check as relative time with the full date, and a mark when it is older than 30 days.
+* On phones the table becomes one card per site, without sideways scrolling.
+* Three first steps instead of an empty page while no key is saved; the key can be shown while typing and its format is checked before saving.
+* Removing the key asks in an own dialog first. "not in MainWP" only appears when MainWP is active.
+* Stylesheet and script are files of the plugin, loaded only on its page. Nothing else is sent or stored.
 
 = 1.1.1 =
 * The answer of formexposed.com is sanitized field by field before it is stored and shown; the child site list from MainWP as well.

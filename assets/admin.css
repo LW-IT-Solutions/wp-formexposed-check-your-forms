@@ -1,0 +1,120 @@
+/* formexposed - check your forms: page of the extension only. Colours follow wp-admin. */
+
+.fxm-wrap { --fxm-accent: var(--wp-admin-theme-color, #2271b1); --fxm-exposed: #b32d2e; --fxm-partial: #996800; --fxm-protected: #00750f; --fxm-neutral: #50575e; --fxm-missing: #2271b1; max-width: 1280px; }
+.fxm-wrap .fxm-title { display: flex; align-items: center; gap: 8px; }
+.fxm-wrap .fxm-title .dashicons { width: 28px; height: 28px; font-size: 28px; color: var(--fxm-accent); }
+.fxm-wrap .notice .dashicons { vertical-align: text-bottom; }
+.fxm-error .dashicons { color: #d63638; }
+
+/* Tone of a rating: text colour, tint and border share one value. */
+.fxm-tone-all { --fxm-tone: var(--fxm-accent); }
+.fxm-tone-exposed { --fxm-tone: var(--fxm-exposed); }
+.fxm-tone-partially_protected { --fxm-tone: var(--fxm-partial); }
+.fxm-tone-protected { --fxm-tone: var(--fxm-protected); }
+.fxm-tone-no_form, .fxm-tone-none { --fxm-tone: var(--fxm-neutral); }
+.fxm-tone-missing { --fxm-tone: var(--fxm-missing); }
+
+/* Summary tiles. */
+.fxm-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0 10px; }
+.fxm-tile { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; min-height: 64px; padding: 10px 14px; text-align: left; color: #1d2327; background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid var(--fxm-tone); border-radius: 4px; font: inherit; cursor: default; }
+.fxm-js .fxm-tile { cursor: pointer; }
+.fxm-js .fxm-tile:hover { border-color: var(--fxm-tone); }
+.fxm-tile:focus-visible { outline: 2px solid var(--fxm-accent); outline-offset: 2px; }
+.fxm-js .fxm-tile[aria-pressed="true"] { background: color-mix(in srgb, var(--fxm-tone) 8%, #fff); border-color: var(--fxm-tone); box-shadow: inset 0 0 0 1px var(--fxm-tone); }
+.fxm-tile .dashicons { grid-row: 1 / span 2; width: 26px; height: 26px; font-size: 26px; color: var(--fxm-tone); }
+.fxm-tile-number { font-size: 22px; font-weight: 600; line-height: 1.2; color: var(--fxm-tone); }
+.fxm-tile-label { font-size: 12px; line-height: 1.35; color: #50575e; }
+
+/* Share of the ratings as one bar. */
+.fxm-bar { display: flex; height: 10px; margin: 0 0 14px; border-radius: 5px; overflow: hidden; background: #dcdcde; gap: 2px; }
+.fxm-bar-part { display: block; min-width: 6px; background: var(--fxm-tone); }
+
+.fxm-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
+.fxm-shown { margin: 0; color: #50575e; }
+.fxm-wrap .button .dashicons { width: 16px; height: 16px; font-size: 16px; vertical-align: text-top; line-height: 1; }
+.fxm-wrap .fxm-refresh { display: inline-flex; align-items: center; gap: 4px; }
+.fxm-wrap .fxm-refresh .dashicons { vertical-align: middle; }
+
+/* Table. */
+.formexposed-mainwp-scroll { overflow-x: auto; }
+.fxm-table td { vertical-align: middle; }
+.fxm-table .fxm-num { text-align: center; }
+.fxm-table tr[hidden] { display: none; }
+.fxm-sub { display: block; color: #646970; font-size: 12px; overflow-wrap: anywhere; }
+.fxm-muted { color: #8c8f94; }
+.fxm-site strong { overflow-wrap: anywhere; }
+.fxm-badge { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0; padding: 1px 9px 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 20px; color: var(--fxm-tone, #3c434a); background: color-mix(in srgb, var(--fxm-tone, #50575e) 11%, #fff); border: 1px solid color-mix(in srgb, var(--fxm-tone, #50575e) 30%, #fff); white-space: nowrap; }
+.fxm-badge .dashicons { width: 16px; height: 16px; font-size: 16px; }
+.fxm-site .fxm-badge { --fxm-tone: var(--fxm-neutral); font-weight: 400; }
+.fxm-badge-missing { --fxm-tone: var(--fxm-missing); }
+.fxm-badge-stale { --fxm-tone: var(--fxm-partial); font-weight: 400; }
+.fxm-score { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 12px; color: #50575e; }
+.fxm-meter { display: inline-block; width: 72px; height: 6px; border-radius: 3px; background: #dcdcde; overflow: hidden; }
+.fxm-meter span { display: block; height: 100%; background: var(--fxm-tone); }
+.fxm-count { display: inline-block; min-width: 28px; padding: 0 8px; border-radius: 999px; font-weight: 600; line-height: 22px; }
+.fxm-count.is-bad { color: #fff; background: #b32d2e; }
+.fxm-count.is-good { color: #00750f; background: #edfaef; }
+.fxm-bots { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.fxm-bots-bar { display: inline-block; width: 64px; height: 6px; border-radius: 3px; background: #f0f0f1; overflow: hidden; flex: none; }
+.fxm-bots-bar span { display: block; height: 100%; background: var(--fxm-accent); }
+.fxm-report { text-align: right; }
+.fxm-wrap .fxm-report .button { display: inline-flex; align-items: center; gap: 2px; }
+.fxm-empty td { padding: 24px 12px; color: #50575e; text-align: center; }
+.fxm-empty .dashicons { color: #8c8f94; }
+
+/* Cards. */
+.fxm-card { margin: 20px 0; padding: 4px 20px 8px; background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; }
+.fxm-card h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fxm-welcome { border-top: 4px solid var(--fxm-accent); }
+.fxm-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 8px 0 12px; padding: 0; list-style: none; counter-reset: fxm-step; }
+.fxm-steps li { position: relative; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 12px 14px 12px 52px; background: #f6f7f7; border-radius: 4px; counter-increment: fxm-step; }
+.fxm-steps li::before { content: counter(fxm-step); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; color: #fff; background: var(--fxm-accent); font-weight: 600; line-height: 26px; text-align: center; }
+.fxm-steps .dashicons { display: none; }
+.fxm-steps span { color: #50575e; }
+.fxm-key .form-table { margin-top: 0; }
+.fxm-key-field { display: inline-flex; align-items: stretch; gap: 4px; max-width: 100%; }
+.fxm-key-field input { min-width: 0; }
+.fxm-wrap .fxm-key-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; }
+.fxm-wrap .fxm-key-toggle .dashicons { vertical-align: middle; }
+.fxm-key-format { margin: 6px 0 0; font-size: 12px; }
+.fxm-key-format:empty { display: none; }
+.fxm-key-format.is-bad { color: #b32d2e; }
+.fxm-key-format.is-good { color: #00750f; }
+.fxm-key-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.fxm-wrap .fxm-remove { display: inline-flex; align-items: center; gap: 4px; color: #b32d2e; border-color: #b32d2e; }
+.fxm-wrap .fxm-remove:hover, .fxm-wrap .fxm-remove:focus { color: #8a2424; border-color: #8a2424; background: #fcf0f1; }
+
+/* Own confirmation dialog (no browser prompt). */
+.fxm-dialog { width: min(440px, calc(100vw - 32px)); padding: 20px 24px; border: 1px solid #c3c4c7; border-radius: 4px; color: #1d2327; background: #fff; box-shadow: 0 8px 32px rgba(0, 0, 0, .25); }
+.fxm-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+.fxm-dialog h2 { margin: 0 0 8px; font-size: 1.3em; }
+.fxm-dialog p { margin: 0 0 16px; }
+.fxm-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.fxm-wrap ~ .fxm-dialog .button-primary.is-destructive, .fxm-dialog .is-destructive { background: #b32d2e; border-color: #b32d2e; }
+.fxm-dialog .is-destructive:hover, .fxm-dialog .is-destructive:focus { background: #8a2424; border-color: #8a2424; }
+
+@media (prefers-reduced-motion: no-preference) {
+	.fxm-tile, .fxm-meter span, .fxm-bots-bar span { transition: border-color .15s, background-color .15s, width .3s; }
+}
+
+/* Phones: the table becomes one card per site, nothing scrolls sideways. */
+@media screen and (max-width: 782px) {
+	.fxm-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.fxm-tile { min-height: 56px; padding: 8px 10px; }
+	.fxm-tile-number { font-size: 19px; }
+	.formexposed-mainwp-scroll { overflow: visible; }
+	.fxm-table thead { display: none; }
+	.fxm-table, .fxm-table tbody { display: block; width: auto; }
+	.fxm-table tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; padding: 12px; border-bottom: 1px solid #dcdcde; }
+	.fxm-table tr.fxm-empty { display: block; }
+	.fxm-table td { display: block; width: auto; min-width: 0; padding: 0; text-align: left; }
+	.fxm-table td.fxm-site, .fxm-table td[colspan], .fxm-table td:nth-child(2) { grid-column: 1 / -1; }
+	.fxm-table td.fxm-report { grid-column: 2; align-self: end; text-align: right; }
+	.fxm-table td[data-label]:not(.fxm-site)::before { content: attr(data-label); display: block; color: #646970; font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+	.fxm-table .fxm-num { text-align: left; }
+	.fxm-site strong { font-size: 15px; }
+	.fxm-wrap .fxm-report .button, .fxm-wrap .fxm-refresh, .fxm-key-actions .button { min-height: 40px; }
+	.fxm-key-field { display: flex; }
+	.fxm-card { padding: 4px 12px 8px; }
+	.fxm-steps li { padding-left: 48px; }
+}
