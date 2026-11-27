@@ -3,7 +3,7 @@
  * Plugin Name:       formexposed – check your forms
  * Plugin URI:        https://formexposed.com/
  * Description:       Shows the contact form protection of all your MainWP child sites from formexposed.com: rating, risk score, last check, problems and blocked bots, with the report one click away.
- * Version:           1.2.0
+ * Version:           1.3.0
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            LW IT Solutions
@@ -29,7 +29,7 @@ if ( defined( 'FORMEXPOSED_MAINWP_FILE' ) ) {
 }
 
 define( 'FORMEXPOSED_MAINWP_FILE', __FILE__ );
-define( 'FORMEXPOSED_MAINWP_VERSION', '1.2.0' );
+define( 'FORMEXPOSED_MAINWP_VERSION', '1.3.0' );
 
 class Formexposed_MainWP {
 
@@ -149,6 +149,23 @@ class Formexposed_MainWP {
 				'text'    => __( 'The key is deleted from this dashboard and the portfolio is no longer shown. The key itself stays valid on formexposed.com.', 'formexposed-check-your-forms' ),
 				'remove'  => __( 'Remove the key', 'formexposed-check-your-forms' ),
 				'cancel'  => __( 'Cancel', 'formexposed-check-your-forms' ),
+				'search'  => __( 'Search sites', 'formexposed-check-your-forms' ),
+				/* translators: %s: column name such as "Problems" */
+				'sortBy'  => __( 'Sort by %s', 'formexposed-check-your-forms' ),
+				'csv'     => __( 'Export CSV', 'formexposed-check-your-forms' ),
+				'csvHead' => array(
+					__( 'Site', 'formexposed-check-your-forms' ),
+					__( 'Host name', 'formexposed-check-your-forms' ),
+					__( 'Rating', 'formexposed-check-your-forms' ),
+					__( 'Risk score', 'formexposed-check-your-forms' ),
+					__( 'Last check', 'formexposed-check-your-forms' ),
+					__( 'Problems', 'formexposed-check-your-forms' ),
+					__( 'Bots blocked (30 days)', 'formexposed-check-your-forms' ),
+					__( 'Report', 'formexposed-check-your-forms' ),
+				),
+				'copy'    => __( 'Copy the host name', 'formexposed-check-your-forms' ),
+				'copied'  => __( 'Copied', 'formexposed-check-your-forms' ),
+				'noMatch' => __( 'No site matches the search.', 'formexposed-check-your-forms' ),
 			)
 		);
 	}
@@ -430,6 +447,95 @@ class Formexposed_MainWP {
 		}
 	}
 
+	/**
+	 * Key figures of the portfolio: average risk, problems, blocked bots, checks older than 30 days.
+	 *
+	 * @param array $rows Rows of the table.
+	 */
+	private static function kpis( $rows ) {
+		$scores = array();
+		$probs  = 0;
+		$bots   = 0;
+		$stale  = 0;
+		foreach ( $rows as $r ) {
+			if ( ! $r['d'] ) {
+				continue;
+			}
+			if ( isset( $r['d']['score'] ) && null !== $r['d']['score'] ) {
+				$scores[] = min( 100, (int) $r['d']['score'] );
+			}
+			$probs += isset( $r['d']['problems'] ) ? (int) $r['d']['problems'] : 0;
+			$bots  += isset( $r['d']['bots_blocked_30d'] ) ? (int) $r['d']['bots_blocked_30d'] : 0;
+			$time   = ! empty( $r['d']['last_check'] ) ? (int) strtotime( (string) $r['d']['last_check'] ) : 0;
+			$stale += $time > 0 && time() - $time > 30 * DAY_IN_SECONDS ? 1 : 0;
+		}
+		$avg   = $scores ? (int) round( array_sum( $scores ) / count( $scores ) ) : null;
+		$items = array(
+			array( 'dashicons-performance', __( 'Average risk', 'formexposed-check-your-forms' ), $avg, '/100', null === $avg ? '' : ( $avg >= 67 ? 'exposed' : ( $avg >= 34 ? 'partially_protected' : 'protected' ) ) ),
+			array( 'dashicons-warning', __( 'Problems found', 'formexposed-check-your-forms' ), $probs, '', $probs ? 'exposed' : 'protected' ),
+			array( 'dashicons-shield', __( 'Bots blocked (30 days)', 'formexposed-check-your-forms' ), $bots, '', 'all' ),
+			array( 'dashicons-clock', __( 'Checks older than 30 days', 'formexposed-check-your-forms' ), $stale, '', $stale ? 'partially_protected' : 'protected' ),
+		);
+		echo '<dl class="fxm-kpis">';
+		foreach ( $items as $k ) {
+			printf(
+				'<div class="fxm-kpi fxm-tone-%1$s"><dt><span class="dashicons %2$s" aria-hidden="true"></span>%3$s</dt><dd><span data-fxm-count="%4$s">%5$s</span>%6$s</dd></div>',
+				esc_attr( '' !== $k[4] ? $k[4] : 'none' ),
+				esc_attr( $k[0] ),
+				esc_html( $k[1] ),
+				esc_attr( null === $k[2] ? '' : (string) $k[2] ),
+				esc_html( null === $k[2] ? '–' : number_format_i18n( $k[2] ) ),
+				'' !== $k[3] && null !== $k[2] ? '<small>' . esc_html( $k[3] ) . '</small>' : ''
+			);
+		}
+		echo '</dl>';
+	}
+
+	/**
+	 * Every checked site on one line from low to high risk. A dot names the site and leads to its row; the tip
+	 * is plain CSS, so it also works without the script.
+	 *
+	 * @param array $rows Rows of the table (with 'key').
+	 */
+	private static function landscape( $rows ) {
+		$dots  = array();
+		$taken = array();
+		foreach ( $rows as $i => $r ) {
+			if ( ! $r['d'] || ! isset( $r['d']['score'] ) || null === $r['d']['score'] ) {
+				continue;
+			}
+			$score = min( 100, (int) $r['d']['score'] );
+			$slot  = (int) round( $score / 7 );
+			$level = isset( $taken[ $slot ] ) ? $taken[ $slot ] + 1 : 0;
+			$taken[ $slot ] = $level;
+			$dots[] = array( $i, $score, min( 3, $level ), $r );
+		}
+		if ( ! $dots ) {
+			return;
+		}
+		$levels = self::levels();
+		?>
+		<section class="fxm-card fxm-land" aria-labelledby="fxm-land-title">
+			<h2 id="fxm-land-title"><?php esc_html_e( 'Risk of the sites', 'formexposed-check-your-forms' ); ?></h2>
+			<div class="fxm-land-track">
+				<span class="fxm-land-zone is-low" aria-hidden="true"></span><span class="fxm-land-zone is-mid" aria-hidden="true"></span><span class="fxm-land-zone is-high" aria-hidden="true"></span>
+				<?php foreach ( $dots as $dot ) : ?>
+					<?php
+					$r     = $dot[3];
+					$label = isset( $levels[ $r['key'] ] ) ? $levels[ $r['key'] ][1] : '';
+					/* translators: 1: site name, 2: risk score from 0 to 100, 3: rating such as "Exposed" */
+					$text = sprintf( __( '%1$s: risk %2$d/100, %3$s', 'formexposed-check-your-forms' ), $r['name'], $dot[1], $label );
+					?>
+					<a class="fxm-land-dot fxm-tone-<?php echo esc_attr( $r['key'] . ( $dot[1] > 80 ? ' is-right' : ( $dot[1] < 15 ? ' is-left' : '' ) ) ); ?>" href="<?php echo esc_attr( '#fxm-site-' . $dot[0] ); ?>" style="<?php echo esc_attr( 'left:' . $dot[1] . '%;bottom:' . ( 10 + $dot[2] * 18 ) . 'px' ); ?>" aria-label="<?php echo esc_attr( $text ); ?>">
+						<span class="fxm-land-tip" aria-hidden="true"><strong><?php echo esc_html( $r['name'] ); ?></strong> <?php echo esc_html( sprintf( /* translators: %d: risk score from 0 to 100 */ __( 'Risk %d/100', 'formexposed-check-your-forms' ), $dot[1] ) ); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+			<div class="fxm-land-axis" aria-hidden="true"><span>0 · <?php esc_html_e( 'low risk', 'formexposed-check-your-forms' ); ?></span><span>50</span><span><?php esc_html_e( 'high risk', 'formexposed-check-your-forms' ); ?> · 100</span></div>
+		</section>
+		<?php
+	}
+
 	/** First steps, shown until a key is saved. */
 	private static function onboarding() {
 		$steps = array(
@@ -483,6 +589,8 @@ class Formexposed_MainWP {
 
 			<?php if ( ! is_wp_error( $domains ) ) : ?>
 			<?php $this->summary( $count, count( $rows ) ); ?>
+			<?php self::kpis( $rows ); ?>
+			<?php self::landscape( $rows ); ?>
 			<div class="fxm-toolbar">
 				<p class="fxm-shown" role="status" data-fxm-shown></p>
 				<a class="button fxm-refresh" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=formexposed_mainwp_refresh' ), 'formexposed_mainwp_refresh' ) ); ?>"><span class="dashicons dashicons-update" aria-hidden="true"></span> <?php esc_html_e( 'Refresh now', 'formexposed-check-your-forms' ); ?></a>
@@ -498,12 +606,17 @@ class Formexposed_MainWP {
 					<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Report', 'formexposed-check-your-forms' ); ?></span></th>
 				</tr></thead>
 				<tbody>
-				<?php foreach ( $rows as $r ) : ?>
+				<?php foreach ( $rows as $i => $r ) : ?>
 					<?php $d = $r['d']; ?>
-					<tr data-fxm-level="<?php echo esc_attr( $r['key'] ); ?>">
+					<tr id="<?php echo esc_attr( 'fxm-site-' . $i ); ?>" data-fxm-level="<?php echo esc_attr( $r['key'] ); ?>"
+						data-fxm-name="<?php echo esc_attr( $r['name'] ); ?>" data-fxm-host="<?php echo esc_attr( $r['host'] ); ?>"
+						data-fxm-score="<?php echo esc_attr( $d && isset( $d['score'] ) && null !== $d['score'] ? (string) min( 100, (int) $d['score'] ) : '' ); ?>"
+						data-fxm-time="<?php echo esc_attr( $d && ! empty( $d['last_check'] ) ? (string) (int) strtotime( (string) $d['last_check'] ) : '' ); ?>"
+						data-fxm-problems="<?php echo esc_attr( $d && isset( $d['problems'] ) && null !== $d['problems'] ? (string) (int) $d['problems'] : '' ); ?>"
+						data-fxm-bots="<?php echo esc_attr( $d && isset( $d['bots_blocked_30d'] ) && null !== $d['bots_blocked_30d'] ? (string) (int) $d['bots_blocked_30d'] : '' ); ?>">
 						<td class="fxm-site" data-label="<?php esc_attr_e( 'Site', 'formexposed-check-your-forms' ); ?>">
 							<strong><?php echo esc_html( $r['name'] ); ?></strong>
-							<span class="fxm-sub"><?php echo esc_html( $r['host'] ); ?></span>
+							<span class="fxm-sub fxm-host"><?php echo esc_html( $r['host'] ); ?></span>
 							<?php if ( ! empty( $r['only_fe'] ) && $this->child_key ) : ?>
 								<span class="fxm-badge"><?php esc_html_e( 'not in MainWP', 'formexposed-check-your-forms' ); ?></span>
 							<?php endif; ?>

@@ -4,7 +4,7 @@ Tags: mainwp, contact form, spam, agency, monitoring
 Requires at least: 6.2
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ A developer can point the extension at another formexposed installation (for exa
 formexposed.com terms of service: https://formexposed.com/en/legal/terms · privacy policy: https://formexposed.com/en/legal/privacy · legal notice: https://formexposed.com/en/legal/imprint
 
 == Changelog ==
+
+= 1.3.0 =
+* Key figures above the table: average risk, problems found, bots blocked in 30 days and checks older than 30 days; the numbers count up once (not with reduced motion).
+* "Risk of the sites": every checked site as a dot on one line from low to high risk. A tip names the site on hover or focus, and the dot leads to its row.
+* Search for a site name or host name with marked hits (shortcut /), together with the filter tiles.
+* The columns Site, Rating, Last check, Problems and Bots blocked sort with a click on the heading.
+* "Export CSV" saves the rows shown as a spreadsheet file, built in the browser; a button next to each host name copies it.
 
 = 1.2.0 =
 * Summary tiles per rating with a bar of the shares; a click on a tile filters the table.
